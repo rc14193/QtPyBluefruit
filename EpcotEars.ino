@@ -29,7 +29,7 @@
 #define NUMPIXELS        1
 #define STRANDLEN        7
 #define LEFTSTRAND       26
-#define RIGHTSTRAND      15
+#define RIGHTSTRAND      25
 
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel leftPixels(STRANDLEN, LEFTSTRAND, NEO_GRB + NEO_KHZ800);
@@ -222,6 +222,8 @@ void commandSetPixel(std::string rxValue) {
   else if(colorSet[0] >= STRANDLEN && colorSet[0] < (2*STRANDLEN)) {
     rightPixels.setPixelColor(colorSet[0]-STRANDLEN, colorSet[2], colorSet[3], colorSet[1]);
   }
+  leftPixels.setBrightness(26);
+  rightPixels.setBrightness(26);
   leftPixels.show();
   rightPixels.show();
   pixels.show();
