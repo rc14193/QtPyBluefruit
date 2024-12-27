@@ -19,28 +19,9 @@
    In this example rxValue is the data received (only accessible inside that function).
    And txValue is the data to be sent, in this example just a byte incremented every second. 
 */
-#include <BLEDevice.h>
-#include <BLEServer.h>
-#include <BLEUtils.h>
-#include <BLE2902.h>
+#include "BLEServer.h"
+#include "Globals.h"
 #include <Adafruit_NeoPixel.h>
-
-// How many internal neopixels do we have? some boards have more than one!
-#define NUMPIXELS        1
-#define STRANDLEN        7
-#define LEFTSTRAND       26
-#define RIGHTSTRAND      25
-
-Adafruit_NeoPixel pixels(NUMPIXELS, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
-Adafruit_NeoPixel leftPixels(STRANDLEN, LEFTSTRAND, NEO_GRB + NEO_KHZ800);
-Adafruit_NeoPixel rightPixels(STRANDLEN, RIGHTSTRAND, NEO_GRB + NEO_KHZ800);
-
-BLEServer *pServer = NULL;
-BLECharacteristic * pTxCharacteristic;
-bool deviceConnected = false;
-bool oldDeviceConnected = false;
-uint8_t txValue = 0;
-uint8_t MAXCOMPONENTS = 4;
 
 // See the following for generating UUIDs:
 // https://www.uuidgenerator.net/
@@ -48,61 +29,6 @@ uint8_t MAXCOMPONENTS = 4;
 #define SERVICE_UUID           "6E400001-B5A3-F393-E0A9-E50E24DCCA9E" // UART service UUID
 #define CHARACTERISTIC_UUID_RX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
 #define CHARACTERISTIC_UUID_TX "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
-
-
-class MyServerCallbacks: public BLEServerCallbacks {
-    void onConnect(BLEServer* pServer) {
-      deviceConnected = true;
-    };
-
-    void onDisconnect(BLEServer* pServer) {
-      deviceConnected = false;
-    }
-};
-
-void returnVersion() {
-  pTxCharacteristic->setValue("Neopixel v2.0");
-  pTxCharacteristic->notify();
-}
-
-class MyCallbacks: public BLECharacteristicCallbacks {
-    void onWrite(BLECharacteristic *pCharacteristic) {
-      std::string rxValue = pCharacteristic->getValue();
-
-      if(rxValue[0] == 'V') {
-        returnVersion();
-      }
-      else if (rxValue[0] == 'P'){   // Set Pixel
-          commandSetPixel(rxValue);
-      }
-      else if (rxValue[0] == 'C'){   // Clear with color
-          commandClearColor(rxValue);
-      }
-      else if (rxValue[0] == 'B'){   // Set brightness
-          commandSetBrightness(rxValue);
-      }
-      else {
-        replyOK();
-      }
-
-      if (rxValue.length() > 0) {
-        Serial.println("*********");
-        Serial.print("Received Value: ");
-        for (int i = 0; i < rxValue.length(); i++)
-          Serial.print(rxValue[i], HEX);
-
-        Serial.println("Length of ");
-        Serial.print(rxValue.length());
-        Serial.println("*********");
-      }
-    }
-};
-
-int startTime = millis();
-bool ledOn = false;
-int color = 0x000000;
-uint8_t mainColor[3] = {0, 0, 0}; 
-uint8_t remainingColor[3] = {0, 0, 0};
 
 void setup() {
   Serial.begin(115200);
@@ -115,15 +41,11 @@ void setup() {
   digitalWrite(NEOPIXEL_POWER, HIGH);
 #endif
 
-  pixels.begin(); // INITIALIZE NeoPixel strip object (REQUIRED)
-  leftPixels.begin();
-  rightPixels.begin();
-  pixels.setBrightness(100); // not so bright
-  leftPixels.setBrightness(100);
-  rightPixels.setBrightness(100);
-
+  FastLED.addLeds<NEOPIXEL, LEFTSTRAND>(leftPixels, STRANDLEN);
+  FastLED.addLeds<NEOPIXEL, RIGHTSTRAND>(rightPixels, STRANDLEN);
+  setAllBrightness();
   // Create the BLE Device
-  BLEDevice::init("MYDEVICE");
+  BLEDevice::init("EpcotEars");
 
   // Create the BLE Server
   pServer = BLEDevice::createServer();
@@ -155,35 +77,18 @@ void setup() {
   Serial.println("Waiting a client connection to notify...");
 }
 
-void replyOK() {
-  pTxCharacteristic->setValue("OK");
-  pTxCharacteristic->notify();
-}
-
-void flashLEDForBLE() {
-    if(!ledOn) {
-      color = 0x0000FF;
-    }
-    else {
-      color = 0x000000;
-    }
-    ledOn = !ledOn;
-    startTime = millis();
-    leftPixels.fill(color);
-    rightPixels.fill(color);
-    pixels.fill(color);
-    leftPixels.show();
-    rightPixels.show();
-    pixels.show();
-}
-
 void loop() {
 
     if (deviceConnected) {
         //pTxCharacteristic->setValue(&txValue, 1);
         //pTxCharacteristic->notify();
         txValue++;
-		delay(10); // bluetooth stack will go into congestion, if too many packets are sent
+        if((millis()-startTime) > 500 && processFrame != nullptr) {
+          frameStep = (frameStep+1) % 14;
+          processFrame();
+          startTime = millis();
+        }
+		    delay(10); // bluetooth stack will go into congestion, if too many packets are sent
 	}
   else if (!deviceConnected && (millis()-startTime) > 500){
     flashLEDForBLE();
@@ -201,78 +106,4 @@ void loop() {
 		// do stuff here on connecting
         oldDeviceConnected = deviceConnected;
     }
-}
-
-void commandSetPixel(std::string rxValue) {
-  Serial.println(F("Command: SetPixel"));
-
-  // Read color
-  uint8_t colorSet[MAXCOMPONENTS+1];
-  for (int j = 1; j <= MAXCOMPONENTS;) {
-    colorSet[j-1] = rxValue[j];
-    Serial.println("Setting colorClear ");
-    Serial.print(colorSet[j-1]);
-    Serial.print(" to the following:");
-    Serial.println(rxValue[j], HEX);
-    j++;
-  }
-  if(colorSet[0] < STRANDLEN) {
-    leftPixels.setPixelColor(colorSet[0], colorSet[2], colorSet[3], colorSet[1]);
-  } 
-  else if(colorSet[0] >= STRANDLEN && colorSet[0] < (2*STRANDLEN)) {
-    rightPixels.setPixelColor(colorSet[0]-STRANDLEN, colorSet[2], colorSet[3], colorSet[1]);
-  }
-  leftPixels.setBrightness(26);
-  rightPixels.setBrightness(26);
-  leftPixels.show();
-  rightPixels.show();
-  pixels.show();
-}
-
-void commandSetBrightness(std::string rxValue) {
-  pixels.setBrightness((uint8_t)rxValue[1]); // not so bright
-  leftPixels.setBrightness((uint8_t)rxValue[1]);
-  rightPixels.setBrightness((uint8_t)rxValue[1]);
-  leftPixels.show();
-  rightPixels.show();
-  pixels.show();
-
-  replyOK();
-}
-
-void setRemainingColor(std::string rxValue) {
-  String value = rxValue.c_str();
-  value.toLowerCase();
-  if(value == "ared") {
-    ///remainingColor = [0xFF, 0x00, 0x00];
-  }
-}
-
-void commandClearColor(std::string rxValue) {
-  Serial.println(F("Command: ClearColor"));
-
-  // Read color
-  uint8_t colorClear[MAXCOMPONENTS];
-  for (int j = 1; j < MAXCOMPONENTS;) {
-    colorClear[j-1] = rxValue[j];
-    Serial.println("Setting colorClear ");
-    Serial.print(colorClear[j-1]);
-    Serial.print(" to the following:");
-    Serial.println(rxValue[j], HEX);
-    j++;
-  }
-
-  uint32_t outputColor = ((uint32_t)colorClear[0] << 16) | ((uint32_t)colorClear[1] << 8) | ((uint32_t)colorClear[2]);
-  Serial.println("Setting pixels now with output color");
-  Serial.print(outputColor, HEX);
-
-  leftPixels.fill(outputColor);
-  rightPixels.fill(outputColor);
-  pixels.fill(outputColor);
-  leftPixels.show();
-  rightPixels.show();
-  pixels.show();
-  
-  // Done
-  replyOK();
 }
