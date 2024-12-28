@@ -3,7 +3,7 @@
 
 #include <FastLED.h>
 
-void commandSetBrightness(std::string rxValue);
+void commandSetBrightness(String rxValue);
 
 void setPixelColor(uint8_t colorSet[]);
 
@@ -15,13 +15,21 @@ void setAllOff();
 
 void flashPattern();
 
+void fadePattern();
+
+void pathPattern();
+
+void alternatePattern();
+
+void snakePattern();
+
 void displayAll();
 
-void setRemainingColor(std::string rxValue);
+void setRemainingColor(String rxValue);
 
-void commandClearColor(std::string rxValue);
+void commandClearColor(String rxValue);
 
-void commandSetPixel(std::string rxValue);
+void commandSetPixel(String rxValue);
 
 
 void flashLEDForBLE();

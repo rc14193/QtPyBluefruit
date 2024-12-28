@@ -41,8 +41,8 @@ void setup() {
   digitalWrite(NEOPIXEL_POWER, HIGH);
 #endif
 
-  FastLED.addLeds<NEOPIXEL, LEFTSTRAND>(leftPixels, STRANDLEN);
-  FastLED.addLeds<NEOPIXEL, RIGHTSTRAND>(rightPixels, STRANDLEN);
+  FastLED.addLeds<WS2812, LEFTSTRAND, RGB>(leftPixels, STRANDLEN);
+  FastLED.addLeds<WS2812, RIGHTSTRAND, RGB>(rightPixels, STRANDLEN);
   setAllBrightness();
   // Create the BLE Device
   BLEDevice::init("EpcotEars");
@@ -84,7 +84,7 @@ void loop() {
         //pTxCharacteristic->notify();
         txValue++;
         if((millis()-startTime) > 500 && processFrame != nullptr) {
-          frameStep = (frameStep+1) % 14;
+          frameStep = (frameStep+1) % MAXFRAMES;
           processFrame();
           startTime = millis();
         }

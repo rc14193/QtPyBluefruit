@@ -6,7 +6,7 @@ MyCallbacks::MyCallbacks() {
 }
 
 void MyCallbacks::onWrite(BLECharacteristic *pCharacteristic) {
-  std::string rxValue = std::string((pCharacteristic->getValue()).c_str());
+  String rxValue = pCharacteristic->getValue();
 
   if (rxValue.length() > 0) {
     Serial.println("*********");
@@ -38,6 +38,22 @@ void MyCallbacks::onWrite(BLECharacteristic *pCharacteristic) {
         break;
       case 'F':
         processFrame = flashPattern;
+        break;
+      case 'L':
+        processFrame = pathPattern;
+        break;
+      case 'A':
+        mainColor = leftPixels[0];
+        remainingColor = leftPixels[1];
+        processFrame = alternatePattern;
+        break;
+      case 's':
+        mainColor = leftPixels[0];
+        remainingColor = leftPixels[1];
+        processFrame = snakePattern;
+        break;
+      case 'f':
+        processFrame = fadePattern;
         break;
       default:
         replyOK();

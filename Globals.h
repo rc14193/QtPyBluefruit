@@ -20,11 +20,12 @@ extern bool deviceConnected;
 extern bool oldDeviceConnected;
 extern uint8_t txValue;
 extern uint8_t MAXCOMPONENTS;
+extern uint8_t MAXFRAMES;
 extern uint8_t frameStep;
 extern void (*processFrame)();
 
 extern int startTime;
 extern bool ledOn;
 extern int color;
-extern uint8_t mainColor[3]; 
-extern uint8_t remainingColor[3];
+extern CRGB mainColor; 
+extern CRGB remainingColor;
