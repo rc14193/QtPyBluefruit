@@ -6,9 +6,20 @@ MyCallbacks::MyCallbacks() {
 }
 
 void MyCallbacks::onWrite(BLECharacteristic *pCharacteristic) {
-      std::string rxValue = std::string((pCharacteristic->getValue()).c_str());
+  std::string rxValue = std::string((pCharacteristic->getValue()).c_str());
 
-    switch (rxValue[0]){
+  if (rxValue.length() > 0) {
+    Serial.println("*********");
+    Serial.print("Received Value: ");
+    for (int i = 0; i < rxValue.length(); i++)
+      Serial.print(rxValue[i], HEX);
+
+    Serial.println("\nLength of ");
+    Serial.print(rxValue.length());
+    Serial.println("*********");
+  }
+  
+  switch (rxValue[0]){
       case 'V':
         returnVersion();
         break;
@@ -31,21 +42,10 @@ void MyCallbacks::onWrite(BLECharacteristic *pCharacteristic) {
       default:
         replyOK();
     }
-
-      if (rxValue.length() > 0) {
-        Serial.println("*********");
-        Serial.print("Received Value: ");
-        for (int i = 0; i < rxValue.length(); i++)
-          Serial.print(rxValue[i], HEX);
-
-        Serial.println("\nLength of ");
-        Serial.print(rxValue.length());
-        Serial.println("*********");
-      }
     };
 
 MyServerCallbacks::MyServerCallbacks() {
-  
+
 }
 
 void MyServerCallbacks::onConnect(BLEServer* pServer) {
