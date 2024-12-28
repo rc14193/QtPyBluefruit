@@ -47,7 +47,7 @@ void MyCallbacks::onWrite(BLECharacteristic *pCharacteristic) {
         remainingColor = leftPixels[1];
         processFrame = alternatePattern;
         break;
-      case 's':
+      case 'W':
         mainColor = leftPixels[0];
         remainingColor = leftPixels[1];
         processFrame = snakePattern;
