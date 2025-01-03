@@ -23,6 +23,10 @@ void alternatePattern();
 
 void snakePattern();
 
+void descendPattern();
+
+void twirlPattern();
+
 void displayAll();
 
 void setRemainingColor(String rxValue);

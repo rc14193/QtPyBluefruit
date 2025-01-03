@@ -32,6 +32,7 @@
 
 void setup() {
   Serial.begin(115200);
+  pinMode(BATTERYPIN, INPUT);
 
 #if defined(NEOPIXEL_POWER)
   // If this board has a power control pin, we must set it to output and high
@@ -83,7 +84,7 @@ void loop() {
         //pTxCharacteristic->setValue(&txValue, 1);
         //pTxCharacteristic->notify();
         txValue++;
-        if((millis()-startTime) > 500 && processFrame != nullptr) {
+        if((millis()-startTime) > FRAMETIME && processFrame != nullptr) {
           frameStep = (frameStep+1) % MAXFRAMES;
           processFrame();
           startTime = millis();

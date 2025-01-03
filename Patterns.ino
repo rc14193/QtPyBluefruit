@@ -4,21 +4,24 @@ void commandSetBrightness(String rxValue) {
   replyOK();
 }
 
-void setPixelColor(uint8_t colorSet[]) {
+void setPixelColor(uint8_t* colorSet) {
+  Serial.println("Setting Pixel number: ");
+  Serial.print(colorSet[0]);
   if(colorSet[0] < STRANDLEN) {
-    leftPixels[colorSet[0]] = CRGB(colorSet[2], colorSet[3], colorSet[1]);
+    leftPixels[colorSet[0]] = CRGB(colorSet[2], colorSet[3], colorSet[4]);
   } 
-  else if(colorSet[0] >= STRANDLEN && colorSet[0] < (2*STRANDLEN)) {
-    rightPixels[colorSet[0]] = CRGB(colorSet[2], colorSet[3], colorSet[1]);
+  else if(colorSet[0] >= STRANDLEN && (uint8_t)colorSet[1] < (2*STRANDLEN)) {
+    rightPixels[colorSet[0]] = CRGB(colorSet[2], colorSet[3], colorSet[4]);
   }
   displayAll();
 }
 
 void alternatePattern() {
+  if(frameStep % 12 != 0) return; // animate every quarter second since 24 fps
   CRGB first;
   CRGB second;
   CRGB color;
-  if(frameStep % 2 == 0) {
+  if(animationStep % 2 == 0) {
     first = mainColor;
     second = remainingColor;
   }
@@ -32,6 +35,7 @@ void alternatePattern() {
     leftPixels[i] = color;
     rightPixels[i] = color;
   }
+  animationStep = (animationStep+1) % MAXFRAMES;
   displayAll();
 }
 
@@ -63,6 +67,7 @@ void setAllOff() {
 }
 
 void flashPattern() {
+  if(frameStep % 6 != 0) return; // animate every quarter second since 24 fps
   uint8_t scale = FastLED.getBrightness();
   if(scale != 26) {
     setAllBrightness();
@@ -73,21 +78,68 @@ void flashPattern() {
   displayAll();
 }
 
+uint8_t descendFrameOne[] = {3};
+uint8_t descendFrameTwo[] = {2, 4};
+uint8_t descendFrameThree[] = {1, 5, 6}; 
+uint8_t descendFrameFour[] = {0};
+
+uint8_t* descendAnimation[] = {descendFrameOne, descendFrameTwo, descendFrameThree, descendFrameFour};
+uint8_t descendRowSizes[] = {1, 2, 3, 1};
+uint8_t DESCENDFRAMES = 4;
+
+void descendPattern() {
+  if(frameStep % 6 != 0) return; // animate every quarter second since 24 fps
+  for(uint8_t i = 0; i < STRANDLEN; i++) {
+    leftPixels[i] = CRGB::Black;
+    rightPixels[i] = CRGB::Black;  
+  }
+
+  uint8_t* frame = descendAnimation[animationStep];
+  for(uint8_t i = 0; i <  descendRowSizes[animationStep]; i++) {
+    leftPixels[frame[i]] = mainColor;
+    rightPixels[frame[i]] = mainColor; 
+  }
+
+  animationStep = (animationStep+1) % DESCENDFRAMES;
+  displayAll();
+}
+
 void snakePattern() {
+  if(frameStep % 3 != 0) return;
   for(uint8_t i = 0; i < STRANDLEN; i++) {
     leftPixels[i] = remainingColor;
     rightPixels[i] = remainingColor;
   }
-  if(frameStep < STRANDLEN) {
-    leftPixels[frameStep] = mainColor;
+  if(animationStep < STRANDLEN) {
+    leftPixels[animationStep] = mainColor;
   }
   else {
-    rightPixels[frameStep % STRANDLEN] = mainColor;
+    rightPixels[animationStep % STRANDLEN] = mainColor;
   }
+  animationStep = (animationStep+1) % (STRANDLEN*2);
+  displayAll();
+}
+
+void twirlPattern() {
+  if(frameStep % 3 != 0) return;
+
+  for(uint8_t i = 0; i < STRANDLEN; i++) {
+    leftPixels[i] = remainingColor;
+    rightPixels[i] = remainingColor;
+  }
+  if(animationStep == 5) animationStep += 1;
+
+  leftPixels[animationStep] = mainColor;
+  rightPixels[animationStep] = mainColor;
+
+  leftPixels[5] = mainColor;
+  rightPixels[5] = mainColor;
+  animationStep = (animationStep+1) % STRANDLEN;
   displayAll();
 }
 
 void fadePattern() {
+  return; // disabled for now
   uint8_t scale = FastLED.getBrightness();
   if(scale == 0) {
     nscale8(leftPixels, STRANDLEN, 26);
@@ -143,19 +195,14 @@ void commandClearColor(String rxValue) {
 void commandSetPixel(String rxValue) {
   Serial.println(F("Command: SetPixel"));
 
-  // Read color
-  uint8_t colorSet[MAXCOMPONENTS+1];
-  for (int j = 1; j <= MAXCOMPONENTS;) {
-    colorSet[j-1] = rxValue[j];
-    Serial.println("Setting colorPixel ");
-    Serial.print(colorSet[j-1]);
-    Serial.print(" to the following:");
-    Serial.println(rxValue[j], HEX);
-    j++;
+  uint8_t pixelComponents[MAXCOMPONENTS] = {0,0,0,0,0}; // app sends as row, col, r, g, b
+
+  for(uint8_t i = 1; i < rxValue.length(); i++) {
+    pixelComponents[i-1] = rxValue[i]; // strip off P that inidcates command
   }
 
   setAllBrightness();
-  setPixelColor(colorSet);
+  setPixelColor(pixelComponents);
   displayAll();
 }
 
