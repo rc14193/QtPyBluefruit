@@ -6,7 +6,7 @@ std::map<String, void(*)()> patternMap;
 
 String getBatteryVoltage() {
   uint raw = analogRead(BATTERYPIN);
-  float voltage = float(raw) * (3.7 / 2047); // 3.7 nominal voltage, datasheet says 12 bit but 11 bit is giving me the correct value as physical measurement
+  float voltage = float(raw) * 3.7 * (1.0/4095.0) * (0.5) // 0-4095 for 12 bit adc, half due to voltage divider, 3.7 nominal voltage
   float percentage = (voltage / 4.2) * 100;
   return String(raw) + " " + String(voltage) + "V " + String(percentage) + "%";
 }
